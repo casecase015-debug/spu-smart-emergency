@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#071126"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Kanit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<title>SPU Admin Console</title>
+</head>
+<body style="margin:0;background:#071126;color:#eef6ff;font-family:'Kanit',sans-serif;min-height:100vh">
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect}=React;
+const{createRoot}=ReactDOM;
+const API='http://localhost:8080';
+const apiGet=async()=>{try{const r=await fetch(API+'/api/state');if(!r.ok)return null;return await r.json()}catch(e){return null}};
+const apiPost=(ep,data)=>{try{fetch(API+ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})}catch(e){}};
+// ======= RENDER =======
+const D=({s,c})=>{
+return React.createElement('span',{style:{display:'inline-block',width:8,height:8,borderRadius:'50%',background:s==='EMERGENCY'?'#FF3B30':s==='ONLINE'?'#00C853':s==='BUSY'?'#00E5FF':'#555',boxShadow:s==='EMERGENCY'?'0 0 6px rgba(255,59,48,0.6)':'none',flexShrink:0,animation:s==='EMERGENCY'?'b 1.2s ease-in-out infinite':'none'}})
+};
+const B=({t,c})=>{
+const m={green:['rgba(0,200,83,0.08)','#00C853'],cyan:['rgba(0,229,255,0.08)','#00E5FF'],red:['rgba(255,59,48,0.08)','#FF3B30'],gray:['rgba(85,85,85,0.1)','#666']};
+const[bg,cl]=m[c]||m.cyan;
+return React.createElement('span',{style:{display:'inline-flex',padding:'1px 6px',borderRadius:3,fontSize:10,fontWeight:700,background:bg,color:cl,fontFamily:"'JetBrains Mono',monospace",whiteSpace:'nowrap'}},t)
+};
+const App=()=>{
+const[st,setSt]=useState({});
+const[tm,setTm]=useState('');
+useEffect(()=>{const u=()=>setTm(new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));u();const i=setInterval(u,1000);return()=>clearInterval(i)},[]);
+useEffect(()=>{let m=true;const p=async()=>{const d=await apiGet();if(m&&d)setSt(d);if(m)setTimeout(p,1000)};p();return()=>{m=false}},[]);
+const ic=(st.active_incidents||[]).length;
+const ops=st.operators||[];
+const onc=ops.filter(o=>o.status==='ONLINE').length;
+const ec=ops.filter(o=>o.status==='EMERGENCY').length;
+const bq=st.broadcast_queue||[];
+
+// StatusBar
+const SB=React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 14px',marginBottom:10,minHeight:44,background:'rgba(7,17,38,0.85)',backdropFilter:'blur(16px)',border:'1px solid rgba(0,229,255,0.08)',borderRadius:12,position:'relative'}},[
+React.createElement('div',{key:'l',style:{display:'flex',alignItems:'center',gap:10,flexShrink:0}},[
+React.createElement('span',{style:{fontSize:16}},'📡'),
+React.createElement('span',{style:{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:'#00E5FF',letterSpacing:'0.12em'}},'SPU ADMIN CONSOLE'),
+React.createElement('span',{style:{width:1,height:20,background:'rgba(0,229,255,0.15)'}}),
+React.createElement('span',{style:{display:'flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:4,background:ic>0?'rgba(255,59,48,0.08)':'rgba(0,200,83,0.08)',color:ic>0?'#FF3B30':'#00C853',fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:600}},[
+React.createElement('span',{style:{width:5,height:5,borderRadius:'50%',background:'currentColor'}}),ic>0?'ACTIVE: '+ic:'ALL CLEAR'
+])]),
+React.createElement('div',{key:'c',style:{display:'flex',gap:14,fontSize:10,color:'#5a6a85',fontFamily:"'JetBrains Mono',monospace",flex:1,justifyContent:'center'}},[
+'📶 Network: ',React.createElement('strong',{style:{color:'#00C853'}},'ONLINE'),
+'👥 Operators: ',React.createElement('strong',{style:{color:'#8899b4'}},onc+'/'+ops.length),
+'🔴 Emergencies: ',React.createElement('strong',{style:{color:ec>0?'#FF3B30':'#5a6a85'}},String(ec))
+]),
+React.createElement('div',{key:'r',style:{display:'flex',alignItems:'center',gap:10,flexShrink:0}},[
+React.createElement('span',{style:{fontSize:8,color:'#5a6a85',fontFamily:"'JetBrains Mono',monospace",letterSpacing:'0.08em',textAlign:'right'}},'INCIDENT LEVEL'),
+React.createElement('span',{style:{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,color:ic===0?'#00C853':'#FF3B30'}},ic===0?'NORMAL':'ACTIVE'),
+React.createElement('span',{style:{width:1,height:20,background:'rgba(0,229,255,0.15)'}}),
+React.createElement('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:'#00E5FF',fontWeight:600}},'🕐 '+tm)
+])]);
+
+// Panel wrapper
+const P=({t,ic,ch})=>React.createElement('div',{style:{background:'rgba(15,30,58,0.75)',backdropFilter:'blur(12px)',border:'1px solid rgba(0,229,255,0.08)',borderRadius:12,display:'flex',flexDirection:'column',height:'100%'}},[
+React.createElement('div',{key:'h',style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:'1px solid rgba(0,229,255,0.06)'}},[
+React.createElement('span',{style:{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:600,color:'#00E5FF'}},t),
+React.createElement('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:ic>0?'#FF3B30':'#5a6a85'}},ic+' active')
+]),
+React.createElement('div',{key:'b',style:{padding:'12px 14px',flex:1,overflow:'auto'}},ch)
+]);
+
+// Panel 1: RF
+const[msg,setMsg]=useState('');
+const[sending,setSending]=useState(false);
+const rq=[...bq].reverse();
+
+// Panel 2: Disaster
+const[title,setTitle]=useState('');
+const[loc,setLoc]=useState('อาคาร 11');
+const incs=st.active_incidents||[];
+
+// Panel 3: Operator
+const[sorted]=useState(()=>[...ops].sort((a,b)=>(({EMERGENCY:0,BUSY:1,ONLINE:2,OFFLINE:3})[a.status]||99)-(({EMERGENCY:0,BUSY:1,ONLINE:2,OFFLINE:3})[b.status]||99)));
+const[dp,setDp]=useState(null);
+
+return React.createElement('div',{style:{maxWidth:1440,margin:'0 auto',padding:'8px 12px'}},[
+SB,
+React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:10,minHeight:'calc(100vh - 100px)'}},[
+// Panel 1
+React.createElement(P,{key:'p1',t:'RF TRANSMITTER',ic:rq.length},[
+React.createElement('textarea',{value:msg,onChange:e=>setMsg(e.target.value),placeholder:'พิมพ์ข้อความออกอากาศ...',rows:3,style:{width:'100%',background:'rgba(0,0,0,0.25)',border:'1px solid '+(msg?'rgba(0,229,255,0.25)':'rgba(0,229,255,0.08)'),borderRadius:8,color:'#eef6ff',fontFamily:'Kanit,sans-serif',fontSize:14,padding:'10px 12px',resize:'vertical',outline:'none',minHeight:70,marginBottom:8}}),
+React.createElement('button',{onClick:async()=>{if(!msg.trim())return;setSending(true);apiPost('/api/broadcast',{message:msg,timestamp:new Date().toISOString()});setMsg('');setSending(false)},disabled:!msg.trim()||sending,style:{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'7px 14px',borderRadius:8,border:'1px solid rgba(0,229,255,0.25)',background:msg.trim()?'rgba(0,229,255,0.08)':'rgba(0,229,255,0.03)',color:msg.trim()?'#00E5FF':'#5a6a85',fontFamily:"'Orbitron',sans-serif",fontSize:10,fontWeight:600,cursor:msg.trim()?'pointer':'not-allowed',opacity:msg.trim()?1:0.5,width:'100%',marginBottom:8}},[sending?'✅':'📡',sending?'TRANSMITTING...':'ส่งออกอากาศ (BROADCAST)']),
+React.createElement('div',{style:{fontSize:9,color:'#5a6a85',fontFamily:"'Orbitron',sans-serif",marginBottom:4}},'ประวัติการออกอากาศ'),
+rq.map((item,i)=>React.createElement('div',{key:item.id||i,style:{padding:'5px 8px',background:'rgba(0,0,0,0.15)',borderLeft:'2px solid rgba(0,229,255,0.3)',borderRadius:4,marginBottom:3}},['#'+(item.id||i+1)+' ',React.createElement('span',{style:{fontSize:9,color:'#5a6a85'}},item.timestamp?new Date(item.timestamp).toLocaleTimeString():''),React.createElement('div',{style:{fontSize:11,color:'#8899b4'}},item.message)]))
+]),
+// Panel 2
+React.createElement(P,{key:'p2',t:'DISASTER CONTROL',ic:incs.length},[
+React.createElement('div',{style:{display:'flex',gap:6,marginBottom:8}},[
+React.createElement('input',{value:title,onChange:e=>setTitle(e.target.value),placeholder:'ชื่อเหตุการณ์...',style:{flex:1,background:'rgba(0,0,0,0.25)',border:'1px solid '+(title?'rgba(255,59,48,0.25)':'rgba(0,229,255,0.08)'),borderRadius:8,color:'#eef6ff',fontFamily:'Kanit,sans-serif',fontSize:12,padding:'7px 10px',outline:'none'}}),
+React.createElement('select',{value:loc,onChange:e=>setLoc(e.target.value),style:{background:'rgba(0,0,0,0.25)',border:'1px solid rgba(0,229,255,0.08)',borderRadius:8,color:'#8899b4',fontSize:10,padding:'7px 6px',outline:'none',cursor:'pointer'}},[
+['อาคาร 11','อาคาร 1','อาคาร 9','หอประชุมใหญ่'].map(l=>React.createElement('option',{key:l,value:l},l))
+])
+]),
+React.createElement('button',{onClick:()=>{if(!title.trim())return;apiPost('/api/report_incident',{title:title.trim(),location:loc,timestamp:new Date().toISOString()});setTitle('')},disabled:!title.trim(),style:{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'6px 12px',borderRadius:8,border:'1px solid rgba(255,59,48,0.3)',background:title.trim()?'rgba(255,59,48,0.08)':'rgba(255,59,48,0.03)',color:title.trim()?'#FF3B30':'#5a6a85',fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:600,cursor:title.trim()?'pointer':'not-allowed',opacity:title.trim()?1:0.5,width:'100%',marginBottom:8}},['🔴 แจ้งเหตุ (REPORT)']),
+React.createElement('div',{style:{fontSize:9,color:'#5a6a85',fontFamily:"'Orbitron',sans-serif",marginBottom:4}},'เหตุการณ์ที่กำลังดำเนินการ'),
+incs.map((inc,i)=>React.createElement('div',{key:inc.title||i,style:{padding:'6px 8px',background:'rgba(255,59,48,0.04)',border:'1px solid rgba(255,59,48,0.1)',borderLeft:'3px solid #FF3B30',borderRadius:4,marginBottom:4}},[
+React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},[
+React.createElement('span',{style:{fontWeight:600,fontSize:11,color:'#FF3B30',fontFamily:"'JetBrains Mono',monospace"}},inc.title),
+React.createElement('button',{onClick:()=>apiPost('/api/resolve_incident',{title:inc.title}),style:{padding:'2px 6px',borderRadius:3,border:'1px solid rgba(0,200,83,0.2)',background:'rgba(0,200,83,0.06)',color:'#00C853',fontSize:8,fontFamily:"'Orbitron',sans-serif",fontWeight:600,cursor:'pointer'}},'Resolve')
+]),
+inc.location?React.createElement('div',{style:{fontSize:9,color:'#FFC107'}},'📍 '+inc.location):null
+]))
+]),
+// Panel 3
+React.createElement(P,{key:'p3',t:'OPERATOR DISPATCH',ic:sorted.length},[
+sorted.length>0?sorted.map((o,i)=>{
+const mission=o.assigned_incident&&o.assigned_incident!=='null';
+const st=o.status||'OFFLINE';
+return React.createElement('div',{key:o.callsign||i,style:{padding:'6px 8px',borderBottom:'1px solid rgba(0,229,255,0.03)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:6}},[
+React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6,flex:1}},[
+React.createElement(D,{s:st}),
+React.createElement('div',{},[
+React.createElement('span',{style:{fontWeight:700,fontSize:11,color:'#00E5FF',fontFamily:"'JetBrains Mono',monospace"}},o.callsign||'---'),
+React.createElement('span',{style:{marginLeft:4}},React.createElement(B,{t:st,c:st==='ONLINE'?'green':st==='BUSY'?'cyan':st==='EMERGENCY'?'red':'gray'})),
+React.createElement('div',{style:{fontSize:9,color:'#5a6a85'}},o.name||''),
+mission?React.createElement('span',{style:{fontSize:8,color:'#FFC107'}},' → '+o.assigned_incident):null
+])
+]),
+(st==='ONLINE'||st==='STANDBY')&&!mission?(
+dp===o.callsign?React.createElement('div',{style:{display:'flex',gap:2}},[
+React.createElement('select',{onChange:e=>{const v=e.target.value;if(v){apiPost('/api/assign_operator',{callsign:o.callsign,incident_title:v});setDp(null)}},style:{background:'rgba(0,0,0,0.3)',border:'1px solid rgba(0,229,255,0.15)',borderRadius:3,color:'#8899b4',fontSize:8,padding:'1px 3px',cursor:'pointer'}},[
+React.createElement('option',{value:''},'เลือก...'),...incs.map(inc=>React.createElement('option',{key:inc.title,value:inc.title},inc.title))
+]),
+React.createElement('button',{onClick:()=>setDp(null),style:{padding:'1px 4px',borderRadius:3,background:'rgba(85,85,85,0.1)',color:'#5a6a85',fontSize:7,border:'none',cursor:'pointer'}},'X')
+]):React.createElement('button',{onClick:()=>setDp(o.callsign),disabled:incs.length===0,style:{padding:'2px 6px',borderRadius:3,border:'1px solid rgba(0,229,255,0.15)',background:'rgba(0,229,255,0.04)',color:incs.length>0?'#00E5FF':'#5a6a85',fontSize:8,fontFamily:"'Orbitron',sans-serif",fontWeight:600,cursor:incs.length>0?'pointer':'not-allowed',whiteSpace:'nowrap'}},'→')
+):null,
+mission?React.createElement('button',{onClick:()=>apiPost('/api/assign_operator',{callsign:o.callsign,incident_title:null}),style:{padding:'2px 6px',borderRadius:3,border:'1px solid rgba(255,193,7,0.2)',background:'rgba(255,193,7,0.06)',color:'#FFC107',fontSize:8,fontFamily:"'Orbitron',sans-serif",fontWeight:600,cursor:'pointer'}},'Clear'):null
+])
+}):React.createElement('div',{style:{textAlign:'center',padding:'20px 0',color:'#5a6a85',fontSize:11}},'— ไม่มีข้อมูล —')
+])
+]),
+// Footer
+React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 14px',background:'rgba(7,17,38,0.8)',backdropFilter:'blur(12px)',border:'1px solid rgba(0,229,255,0.06)',borderRadius:12,fontSize:9,color:'#5a6a85',fontFamily:"'JetBrains Mono',monospace"}},[
+'🛡️ SPU Admin Console — Sripatum University',
+React.createElement('span',{style:{display:'flex',alignItems:'center',gap:8}},[
+React.createElement('span',{style:{display:'flex',alignItems:'center',gap:3}},[React.createElement('span',{style:{width:4,height:4,borderRadius:'50%',background:'#00C853'}}),'Online']),
+'⚙️ Uptime 99.97%'
+])
+])
+]);
+};
+createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+<style>
+@keyframes b{50%{opacity:0.4}}
+@media(max-width:1100px){div[style*="grid-template-columns: 1fr 1fr 1fr"]{grid-template-columns:1fr!important}}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 10% 5%,rgba(0,229,255,0.05),transparent 40rem);pointer-events:none;z-index:0}
+</style>
+</body>
+</html>
